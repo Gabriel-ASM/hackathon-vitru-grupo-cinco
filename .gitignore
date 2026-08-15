@@ -1,0 +1,17 @@
+# Dependências e artefatos de build
+node_modules/
+dist/
+client/dist/
+
+# Segredos e configurações locais
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs e arquivos temporários
+logs/
+*.log
+npm-debug.log*
+.DS_Store

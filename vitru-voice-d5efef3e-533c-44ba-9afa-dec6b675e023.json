@@ -1,0 +1,510 @@
+{
+  "session_id": "d5efef3e-533c-44ba-9afa-dec6b675e023",
+  "events": [
+    {
+      "type": "session_created",
+      "timestamp": "2026-08-15T18:18:30.230Z",
+      "elapsed_ms": 2461
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:18:30.230Z",
+      "elapsed_ms": 2461,
+      "response_id": "resp_EDDFejsRZOHUsXRkEd66o"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:18:32.570Z",
+      "elapsed_ms": 4801,
+      "text": "Oi, Gabriel! Eu vou te ajudar a organizar a rotina para que depois o planejamento da semana faça sentido de verdade. Para começar simples: em geral, você costuma acordar por volta de que horas nos dias de semana?"
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:18:32.574Z",
+      "elapsed_ms": 4805,
+      "response_id": "resp_EDDFejsRZOHUsXRkEd66o"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:18:42.879Z",
+      "elapsed_ms": 15110
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:18:59.552Z",
+      "elapsed_ms": 31783
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:18:59.558Z",
+      "elapsed_ms": 31789,
+      "response_id": "resp_EDDG7BnuUEYOU2lzrQXmj"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:19:00.054Z",
+      "elapsed_ms": 32285,
+      "text": "Eu acordo por volta das oito e meia e vou dormir próximo das onze horas. Eu tenho estágio das duas às seis. Eu jogo xadrez nos minutos, demora uma hora de deslocamento do estágio. E também ao fim eu vou na academia depois que eu chego em casa."
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:19:03.831Z",
+      "elapsed_ms": 36062,
+      "text": "Beleza, deixa eu organizar isso na cabeça rapidinho e seguimos."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:19:03.838Z",
+      "elapsed_ms": 36069,
+      "tool": "update_student_routine",
+      "details": {
+        "call_id": "call_CiPEgz3crN0GbNeR"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:19:03.844Z",
+      "elapsed_ms": 36075,
+      "tool": "update_student_routine",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:19:03.851Z",
+      "elapsed_ms": 36082,
+      "response_id": "resp_EDDG7BnuUEYOU2lzrQXmj"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:19:36.150Z",
+      "elapsed_ms": 68381
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:19:37.536Z",
+      "elapsed_ms": 69767
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:19:37.543Z",
+      "elapsed_ms": 69775,
+      "response_id": "resp_EDDGjF6jh3q5FRZWx5zB5"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:19:38.039Z",
+      "elapsed_ms": 70270,
+      "text": "Olá, tudo bem?"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:19:40.335Z",
+      "elapsed_ms": 72566,
+      "text": "Tudo certo por aqui! E com você, tá bem também?\n\nAproveitando, em quais dias da semana o seu estágio acontece? Isso ajuda bastante a encaixar o resto da rotina."
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:19:40.335Z",
+      "elapsed_ms": 72566,
+      "response_id": "resp_EDDGjF6jh3q5FRZWx5zB5"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:19:49.279Z",
+      "elapsed_ms": 81511
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:19:57.109Z",
+      "elapsed_ms": 89340
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:19:57.120Z",
+      "elapsed_ms": 89351,
+      "response_id": "resp_EDDH31kd18e0VDv0hh96v"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:19:57.607Z",
+      "elapsed_ms": 89839,
+      "text": "Então, é todos os dias? A academia também é todos os dias. E também o deslocamento obviamente é todos os dias também, né?"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:20:00.722Z",
+      "elapsed_ms": 92953,
+      "text": "Perfeito, deixa eu registrar isso rapidinho e seguimos para o próximo ponto."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:20:00.722Z",
+      "elapsed_ms": 92953,
+      "tool": "update_student_routine",
+      "details": {
+        "call_id": "call_vnJSMoP8cDZy80ZP"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:20:00.723Z",
+      "elapsed_ms": 92954,
+      "tool": "update_student_routine",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:20:00.736Z",
+      "elapsed_ms": 92968,
+      "response_id": "resp_EDDH31kd18e0VDv0hh96v"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:20:19.939Z",
+      "elapsed_ms": 112170
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:20:23.930Z",
+      "elapsed_ms": 116161
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:20:23.938Z",
+      "elapsed_ms": 116169,
+      "response_id": "resp_EDDHUtIwH5l9YI6reWjA1"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:20:24.514Z",
+      "elapsed_ms": 116745,
+      "text": "Próximo ponto"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:20:27.541Z",
+      "elapsed_ms": 119772,
+      "text": "Ótimo, está bem encaminhado. Agora me conta: você prefere estudar mais de manhã, à noite ou em pequenos blocos ao longo do dia? E quanto tempo de sessão te deixa confortável, tipo 30, 45 ou 60 minutos?"
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:20:27.546Z",
+      "elapsed_ms": 119777,
+      "response_id": "resp_EDDHUtIwH5l9YI6reWjA1"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:20:39.934Z",
+      "elapsed_ms": 132165
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:20:43.905Z",
+      "elapsed_ms": 136136
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:20:43.907Z",
+      "elapsed_ms": 136139,
+      "response_id": "resp_EDDHoHAkZzmYjbspQF6PS"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:20:44.487Z",
+      "elapsed_ms": 136718,
+      "text": "Pequenos blocos ao longo do dia de no máximo 30 minutos."
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:20:45.570Z",
+      "elapsed_ms": 137801,
+      "text": "Legal, vou guardar esse jeito de estudo e já seguimos."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:20:45.570Z",
+      "elapsed_ms": 137801,
+      "tool": "update_student_routine",
+      "details": {
+        "call_id": "call_T12Ht60T8QVeELg2"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:20:45.571Z",
+      "elapsed_ms": 137802,
+      "tool": "update_student_routine",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:20:45.574Z",
+      "elapsed_ms": 137806,
+      "response_id": "resp_EDDHoHAkZzmYjbspQF6PS"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:20:51.131Z",
+      "elapsed_ms": 143362
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:20:52.192Z",
+      "elapsed_ms": 144423
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:20:52.194Z",
+      "elapsed_ms": 144425,
+      "response_id": "resp_EDDHw4v4p8T1FuSC6O5Az"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:20:52.552Z",
+      "elapsed_ms": 144783,
+      "text": "E aí?"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:20:55.613Z",
+      "elapsed_ms": 147845,
+      "text": "Boa, então já entendi que você gosta de blocos curtos ao longo do dia.\n\nAgora, nos fins de semana, especialmente sábado e domingo, você costuma ter algum compromisso fixo ou dá para usar alguns horários para estudo ou descanso mesmo?"
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:20:55.614Z",
+      "elapsed_ms": 147845,
+      "response_id": "resp_EDDHw4v4p8T1FuSC6O5Az"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:21:08.115Z",
+      "elapsed_ms": 160346
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:21:14.403Z",
+      "elapsed_ms": 166634
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:21:14.405Z",
+      "elapsed_ms": 166636,
+      "response_id": "resp_EDDIIxBP5B5EG16GcVAbh"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:21:14.868Z",
+      "elapsed_ms": 167099,
+      "text": "Dá para usar alguns descansos basicamente isso tudo. Eu não tenho nenhum compromisso na semana"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:21:16.311Z",
+      "elapsed_ms": 168542,
+      "text": "Beleza, vou anotar isso e aí a gente fecha as últimas lacunas."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:21:16.312Z",
+      "elapsed_ms": 168543,
+      "tool": "update_student_routine",
+      "details": {
+        "call_id": "call_bl1LXip9XA5YRfdV"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:21:16.313Z",
+      "elapsed_ms": 168544,
+      "tool": "update_student_routine",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:21:16.330Z",
+      "elapsed_ms": 168561,
+      "response_id": "resp_EDDIIxBP5B5EG16GcVAbh"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:21:37.999Z",
+      "elapsed_ms": 190230
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:21:41.596Z",
+      "elapsed_ms": 193827
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:21:41.607Z",
+      "elapsed_ms": 193839,
+      "response_id": "resp_EDDIj9s3omHOWMt1p7ILa"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:21:41.953Z",
+      "elapsed_ms": 194184,
+      "text": "E quais são as próximas vacinas?"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:21:46.112Z",
+      "elapsed_ms": 198343,
+      "text": "Tá ficando bem completo. O planejamento depois vai reservar aproximadamente 30 minutos de estudo fora da aula para cada hora de aula, e a ideia é encaixar isso de forma realista na sua rotina.\n\nAgora, me conta: você sente a carga atual pesada, ok ou bem leve? E tem alguma restrição importante, tipo horários que você"
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:21:46.122Z",
+      "elapsed_ms": 198353,
+      "response_id": "resp_EDDIj9s3omHOWMt1p7ILa"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:22:01.367Z",
+      "elapsed_ms": 213598
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:22:03.395Z",
+      "elapsed_ms": 215626
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:22:03.400Z",
+      "elapsed_ms": 215631,
+      "response_id": "resp_EDDJ5mN0hv9PriakcWk5o"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:22:03.703Z",
+      "elapsed_ms": 215934,
+      "text": "Tá tranquilo, também notei."
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:22:04.948Z",
+      "elapsed_ms": 217180,
+      "text": "Perfeito, vou registrar isso rapidinho e já te faço a última checagem."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:22:04.949Z",
+      "elapsed_ms": 217180,
+      "tool": "update_student_routine",
+      "details": {
+        "call_id": "call_ctetplG127IZVcKd"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:22:04.949Z",
+      "elapsed_ms": 217181,
+      "tool": "update_student_routine",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:22:04.950Z",
+      "elapsed_ms": 217181,
+      "response_id": "resp_EDDJ5mN0hv9PriakcWk5o"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:22:27.100Z",
+      "elapsed_ms": 239331
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:22:32.313Z",
+      "elapsed_ms": 244544
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:22:32.417Z",
+      "elapsed_ms": 244648,
+      "response_id": "resp_EDDJYhHgOTDG0Bq0XEV7Q"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:22:32.796Z",
+      "elapsed_ms": 245027,
+      "text": "Qual última chacagem?"
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:22:37.565Z",
+      "elapsed_ms": 249796,
+      "text": "Resumo rápido: você acorda por volta de 8 e meia, dorme perto de meia-noite, tem estágio de segunda a sexta das 14 às 18, com cerca de uma hora de deslocamento para ir e outra para voltar, faz academia nos dias úteis, prefere estudar em pequenos blocos de até 30 minutos ao longo do dia, e no fim de semana não tem compromisso fix"
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:22:37.571Z",
+      "elapsed_ms": 249803,
+      "response_id": "resp_EDDJYhHgOTDG0Bq0XEV7Q"
+    },
+    {
+      "type": "user_speech_started",
+      "timestamp": "2026-08-15T18:22:56.075Z",
+      "elapsed_ms": 268306
+    },
+    {
+      "type": "user_speech_stopped",
+      "timestamp": "2026-08-15T18:22:57.707Z",
+      "elapsed_ms": 269938
+    },
+    {
+      "type": "response_created",
+      "timestamp": "2026-08-15T18:22:57.717Z",
+      "elapsed_ms": 269948,
+      "response_id": "resp_EDDJxpwzuB8Gp3ljjZL3g"
+    },
+    {
+      "type": "user_transcript_completed",
+      "timestamp": "2026-08-15T18:22:58.010Z",
+      "elapsed_ms": 270242,
+      "text": "Isso, exatamente."
+    },
+    {
+      "type": "assistant_transcript_completed",
+      "timestamp": "2026-08-15T18:22:59.807Z",
+      "elapsed_ms": 272038,
+      "text": "Beleza, vou finalizar isso rapidinho com base no que você confirmou."
+    },
+    {
+      "type": "tool_started",
+      "timestamp": "2026-08-15T18:22:59.807Z",
+      "elapsed_ms": 272038,
+      "tool": "complete_onboarding",
+      "details": {
+        "call_id": "call_ftShAhxTnXiYK3cI"
+      }
+    },
+    {
+      "type": "tool_completed",
+      "timestamp": "2026-08-15T18:22:59.808Z",
+      "elapsed_ms": 272039,
+      "tool": "complete_onboarding",
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "type": "response_done",
+      "timestamp": "2026-08-15T18:22:59.808Z",
+      "elapsed_ms": 272039,
+      "response_id": "resp_EDDJxpwzuB8Gp3ljjZL3g"
+    }
+  ]
+}
