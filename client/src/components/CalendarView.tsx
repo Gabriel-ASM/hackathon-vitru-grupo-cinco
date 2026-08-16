@@ -13,7 +13,7 @@ const dayLabels: Record<WeeklySchedule["days"][number]["day_of_week"], string> =
 };
 
 function eventClass(type: string): string {
-  if (type === "class" || type === "asynchronous_class") return "event-card event-card--class";
+  if (type === "class" || type === "asynchronous_class" || type === "academic_activity") return "event-card event-card--class";
   if (type === "study") return "event-card event-card--study";
   if (type === "sleep") return "event-card event-card--sleep";
   return "event-card event-card--personal";
@@ -22,6 +22,7 @@ function eventClass(type: string): string {
 function eventLabel(type: string, fixed: boolean): string {
   if (type === "class") return "Aula fixa";
   if (type === "asynchronous_class") return "Aula assíncrona";
+  if (type === "academic_activity") return "Atividade acadêmica";
   if (type === "study") return "Estudo";
   if (type === "sleep") return "Sono";
   return fixed ? "Fixo" : "Rotina";
@@ -54,7 +55,7 @@ export function CalendarView({ schedule }: { schedule: WeeklySchedule }) {
         </div>
         <div className="summary-grid" aria-label="Resumo da semana">
           <span><strong>{schedule.summary.class_hours}h</strong> de aula</span>
-          <span><strong>{schedule.summary.asynchronous_class_hours}h</strong> assíncronas</span>
+          <span><strong>{schedule.summary.academic_activity_hours}h</strong> atividades acadêmicas</span>
           {(!academicView || includeStudy) && (
             <span><strong>{schedule.summary.planned_extra_study_hours}h</strong> de estudo</span>
           )}
@@ -95,8 +96,8 @@ export function CalendarView({ schedule }: { schedule: WeeklySchedule }) {
       <p className="calendar-mode-description">
         {academicView
           ? includeStudy
-            ? "Aulas fixas, aulas assíncronas e blocos de estudo."
-            : "Somente aulas fixas e blocos de aulas assíncronas."
+            ? "Aula fixa, atividades autônomas da disciplina e blocos de estudo."
+            : "Aula fixa e atividades autônomas da disciplina."
           : "Aulas, estudo, trabalho, deslocamentos, compromissos e descanso no mesmo lugar."}
       </p>
 

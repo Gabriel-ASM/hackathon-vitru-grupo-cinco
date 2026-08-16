@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { validateWeeklySchedule } from "../../shared/schemas/schedule";
+import {
+  applyTemporaryClassChanges,
+  validateWeeklySchedule,
+} from "../../shared/schemas/schedule";
 import {
   createEmptyRoutine,
   routineExtractionResultSchema,
+  type AcademicDecisions,
   type StudentRoutine,
 } from "../../shared/schemas/routine";
 import { MOCK_SCHEDULE } from "../../shared/mockSchedule";
 import {
   buildRoutineClarificationContext,
+  clarificationAddedUserFacts,
+  getBlockingRoutineWarnings,
   shouldClarifyRoutine,
 } from "../../shared/routine-clarification";
 import type { WeeklySchedule } from "../../shared/types";
@@ -66,9 +72,12 @@ function SchedulePreview() {
         ))}
       </div>
       <div className="async-hours">
-        <strong>{MOCK_SCHEDULE.asynchronous_hours_week}h</strong>
-        <span>de aulas assíncronas na semana</span>
+        <strong>{MOCK_SCHEDULE.academic_activity_hours_week ?? MOCK_SCHEDULE.asynchronous_hours_week}h</strong>
+        <span>autônomas na disciplina da aula</span>
       </div>
+      <p className="muted preview-note">
+        {MOCK_SCHEDULE.available_offerings?.filter((offering) => !offering.is_current).length ?? 0} alternativas temporárias podem ser consideradas durante a conversa.
+      </p>
     </aside>
   );
 }
@@ -89,8 +98,12 @@ function App() {
   const stopVoiceRef = useRef<() => void>(() => undefined);
   const routineClarificationRoundsRef = useRef(0);
   const clarificationStartRef = useRef<string | null>(null);
+  const clarificationBaselineUserCountRef = useRef<number | null>(null);
   const diagnosticRecorderRef = useRef<DiagnosticRecorder>(() => undefined);
   const [routine, setRoutine] = useState<StudentRoutine>(() => createEmptyRoutine());
+  const [academicDecisions, setAcademicDecisions] = useState<AcademicDecisions>({
+    temporary_class_changes: [],
+  });
   const [onboardingSummary, setOnboardingSummary] = useState("");
   const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
   const [extractionError, setExtractionError] = useState<string | null>(null);
@@ -101,6 +114,8 @@ function App() {
   const [technicalError, setTechnicalError] = useState<string | null>(null);
   const [plannerLoading, setPlannerLoading] = useState(false);
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
+  const [autoPlanPending, setAutoPlanPending] = useState(false);
+  const plannerInFlightRef = useRef(false);
   const [recordDebugAudio, setRecordDebugAudio] = useState(false);
   const [voicePreset, setVoicePreset] = useState<VoicePreset>("marin_2_1");
   const [routineClarificationContext, setRoutineClarificationContext] = useState<string | null>(null);
@@ -153,28 +168,52 @@ function App() {
 
       const parsed = routineExtractionResultSchema.parse(data);
       setRoutine(parsed.routine);
+      setAcademicDecisions(parsed.academic_decisions);
       setOnboardingSummary(parsed.summary);
       setExtractionWarnings(parsed.warnings);
+      const blockingWarnings = getBlockingRoutineWarnings(parsed.warnings, parsed.routine);
+      const assumptionsApplied = [
+        ...parsed.routine.notes,
+        ...[parsed.routine.work, parsed.routine.commutes, parsed.routine.fixed_commitments, parsed.routine.hobbies, parsed.routine.exercise, parsed.routine.availability]
+          .flat()
+          .map((entry) => entry.notes ?? ""),
+      ].filter((note) => /Suposição operacional:/i.test(note));
       diagnosticRecorderRef.current("extraction_completed", {
         details: {
           warnings: parsed.warnings.length,
+          soft_warning_count: Math.max(0, parsed.warnings.length - blockingWarnings.length),
+          blocking_warning_count: blockingWarnings.length,
+          assumptions_applied: [...new Set(assumptionsApplied)].length,
           duration_ms: Math.round(performance.now() - extractionStartedAt),
           warning_text: parsed.warnings.join(" | ").slice(0, 500),
           clarification_round: routineClarificationRoundsRef.current,
+          temporary_class_changes: parsed.academic_decisions.temporary_class_changes.length,
+          clarification_user_delta:
+            clarificationBaselineUserCountRef.current === null
+              ? null
+              : transcriptSnapshot.filter((entry) => entry.role === "user").length - clarificationBaselineUserCountRef.current,
         },
       });
       if (extractionSource === "voice") stopVoiceRef.current();
-      if (shouldClarifyRoutine(parsed.warnings, extractionSource, routineClarificationRoundsRef.current)) {
+      if (shouldClarifyRoutine(parsed.warnings, extractionSource, routineClarificationRoundsRef.current, parsed.routine)) {
+        setAutoPlanPending(false);
         routineClarificationRoundsRef.current += 1;
+        clarificationBaselineUserCountRef.current = transcriptSnapshot.filter((entry) => entry.role === "user").length;
         setRoutineClarificationContext(
-          buildRoutineClarificationContext(parsed.warnings, parsed.routine),
+          buildRoutineClarificationContext(
+            parsed.warnings,
+            parsed.routine,
+            transcriptSnapshot.filter((entry) => entry.role === "user").map((entry) => entry.text),
+          ),
         );
         setClarificationActive(true);
         setScreen("conversation");
       } else {
+        clarificationBaselineUserCountRef.current = null;
         setRoutineClarificationContext(null);
         setClarificationActive(false);
         setScreen("ready");
+        setAutoPlanPending(true);
       }
     } catch (error) {
       if (abortController.signal.aborted) return;
@@ -197,6 +236,23 @@ function App() {
   }, []);
 
   const handleCompleted = useCallback(() => {
+    const baselineUserCount = clarificationBaselineUserCountRef.current;
+    const currentUserCount = transcriptRef.current.filter((entry) => entry.role === "user").length;
+    if (baselineUserCount !== null && !clarificationAddedUserFacts(baselineUserCount, currentUserCount)) {
+      clarificationBaselineUserCountRef.current = null;
+      diagnosticRecorderRef.current("clarification_reused_draft", {
+        details: {
+          reason: "no_new_user_facts",
+          clarification_round: routineClarificationRoundsRef.current,
+        },
+      });
+      stopVoiceRef.current();
+      setRoutineClarificationContext(null);
+      setClarificationActive(false);
+      setScreen("ready");
+      setAutoPlanPending(true);
+      return;
+    }
     void extractRoutine();
   }, [extractRoutine]);
 
@@ -258,9 +314,12 @@ function App() {
     setPlannerRequest(null);
     setPlannerResponse(null);
     setWeeklySchedule(null);
+    setAcademicDecisions({ temporary_class_changes: [] });
+    setAutoPlanPending(false);
     setExtractionWarnings([]);
     routineClarificationRoundsRef.current = 0;
     clarificationStartRef.current = null;
+    clarificationBaselineUserCountRef.current = null;
     setRoutineClarificationContext(null);
     setClarificationActive(false);
     void extractRoutine(parsedTranscript, "reference");
@@ -275,15 +334,26 @@ function App() {
     setExtractionWarnings([]);
     routineClarificationRoundsRef.current = 0;
     clarificationStartRef.current = null;
+    clarificationBaselineUserCountRef.current = null;
     setRoutineClarificationContext(null);
     setClarificationActive(false);
+    setAutoPlanPending(false);
+    setAcademicDecisions({ temporary_class_changes: [] });
     setScreen("conversation");
     await voice.start(debug && recordDebugAudio, voicePreset);
   };
 
   const generateSchedule = async () => {
+    if (plannerInFlightRef.current) return;
+    plannerInFlightRef.current = true;
+    setAutoPlanPending(false);
+    const plannerStartedAt = performance.now();
+    const planningAcademicSchedule = applyTemporaryClassChanges({
+      ...MOCK_SCHEDULE,
+      temporary_class_changes: academicDecisions.temporary_class_changes,
+    });
     const requestBody = {
-      academic_schedule: MOCK_SCHEDULE,
+      academic_schedule: planningAcademicSchedule,
       routine,
       pedagogical_rules: {
         extra_study_minutes_per_class_hour: 30,
@@ -297,6 +367,18 @@ function App() {
     setPlannerError(null);
     setTechnicalError(null);
     setPlannerLoading(true);
+    diagnosticRecorderRef.current("planner_started", {
+      details: {
+        routine_items: [routine.work, routine.commutes, routine.fixed_commitments, routine.hobbies, routine.exercise].reduce(
+          (total, entries) => total + entries.length,
+          0,
+        ),
+        extraction_warnings: extractionWarnings.length,
+        academic_activity_hours: MOCK_SCHEDULE.academic_activity_hours_week ?? MOCK_SCHEDULE.asynchronous_hours_week,
+        temporary_class_changes: academicDecisions.temporary_class_changes.length,
+        week_start: requestBody.week_start,
+      },
+    });
     voice.stop();
 
     try {
@@ -317,17 +399,42 @@ function App() {
         throw new Error(details || plannerData.error || "O Schedule Generator falhou.");
       }
 
-      const validatedSchedule = validateWeeklySchedule(plannerData.schedule, MOCK_SCHEDULE);
+      const validatedSchedule = validateWeeklySchedule(plannerData.schedule, planningAcademicSchedule);
       setWeeklySchedule(validatedSchedule);
       setScreen("calendar");
+      diagnosticRecorderRef.current("planner_completed", {
+        details: {
+          duration_ms: Math.round(performance.now() - plannerStartedAt),
+          days: validatedSchedule.days.length,
+          items: validatedSchedule.days.reduce((total, day) => total + day.items.length, 0),
+          academic_activity_hours: validatedSchedule.summary.academic_activity_hours,
+          planner_model: (plannerData as { planner?: { model?: string } }).planner?.model ?? null,
+          reasoning_effort: (plannerData as { planner?: { reasoning_effort?: string } }).planner?.reasoning_effort ?? null,
+          repair_attempted: Boolean((plannerData as { planner?: { repair_attempted?: boolean } }).planner?.repair_attempted),
+        },
+      });
     } catch (error) {
       const message = formatError(error);
       setPlannerError(message);
       setTechnicalError(message);
+      diagnosticRecorderRef.current("planner_failed", {
+        details: {
+          duration_ms: Math.round(performance.now() - plannerStartedAt),
+          message,
+        },
+      });
     } finally {
       setPlannerLoading(false);
+      plannerInFlightRef.current = false;
+      await voice.flushDiagnostics();
     }
   };
+
+  useEffect(() => {
+    if (!autoPlanPending || extractionLoading || plannerLoading || weeklySchedule || plannerInFlightRef.current) return;
+    setAutoPlanPending(false);
+    void generateSchedule();
+  }, [autoPlanPending, academicDecisions, extractionLoading, plannerLoading, routine, weeklySchedule]);
 
   const resetPrototype = () => {
     voice.stop();
@@ -337,12 +444,14 @@ function App() {
     extractionSourceRef.current = "voice";
     routineClarificationRoundsRef.current = 0;
     clarificationStartRef.current = null;
+    clarificationBaselineUserCountRef.current = null;
     setRoutineClarificationContext(null);
     setClarificationActive(false);
     setScreen("welcome");
     transcriptRef.current = [];
     setTranscript([]);
     setRoutine(createEmptyRoutine());
+    setAcademicDecisions({ temporary_class_changes: [] });
     setOnboardingSummary("");
     setExtractionWarnings([]);
     setExtractionError(null);
@@ -353,6 +462,8 @@ function App() {
     setPlannerError(null);
     setTechnicalError(null);
     setWeeklySchedule(null);
+    setAutoPlanPending(false);
+    plannerInFlightRef.current = false;
   };
 
   const voiceError = friendlyVoiceError(voice.error);

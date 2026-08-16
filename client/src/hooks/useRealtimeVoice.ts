@@ -747,6 +747,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     diagnosticSessionId,
     diagnosticEvents,
     recordDiagnostic: emitDiagnostic,
+    flushDiagnostics: flushDiagnosticEvents,
     recordedAudioUrl,
   };
 }

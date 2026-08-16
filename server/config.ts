@@ -1,4 +1,8 @@
 import "dotenv/config";
+import {
+  getAssistantVoiceProfile,
+  type Institution,
+} from "../shared/voice-profile";
 
 export const realtimePresets = [
   "marin_2_1",
@@ -11,6 +15,10 @@ export type RealtimePreset = (typeof realtimePresets)[number];
 export type NoiseReduction = "near_field" | "far_field";
 export type VadEagerness = "low" | "medium" | "high" | "auto";
 export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+// A versão do SDK instalada neste protótipo ainda não expõe "max" no tipo
+// do Responses API; mantemos o contrato alinhado ao SDK e usamos high por
+// padrão para os planejadores.
+export type PlannerReasoningEffort = "low" | "medium" | "high";
 export const realtimeVoices = [
   "alloy",
   "ash",
@@ -42,6 +50,13 @@ const configuredReasoningEffort: ReasoningEffort = [
 ].includes(process.env.REALTIME_REASONING_EFFORT ?? "")
   ? (process.env.REALTIME_REASONING_EFFORT as ReasoningEffort)
   : "low";
+const configuredPlannerReasoningEffort: PlannerReasoningEffort = [
+  "low",
+  "medium",
+  "high",
+].includes(process.env.PLANNER_REASONING_EFFORT ?? "")
+  ? (process.env.PLANNER_REASONING_EFFORT as PlannerReasoningEffort)
+  : "high";
 const maxOutputTokens = Number(process.env.REALTIME_MAX_OUTPUT_TOKENS ?? 2048);
 const configuredVoice: RealtimeVoice = realtimeVoices.includes(
   process.env.REALTIME_VOICE as RealtimeVoice,
@@ -62,12 +77,14 @@ export type RealtimeRuntimeConfig = {
 export const config: RealtimeRuntimeConfig & {
   port: number;
   plannerModel: string;
+  plannerReasoningEffort: PlannerReasoningEffort;
   diagnosticsEnabled: boolean;
   diagnosticsDir: string;
 } = {
   port: Number.isFinite(port) ? port : 3001,
   realtimeModel: process.env.REALTIME_MODEL ?? "gpt-realtime-2.1",
-  plannerModel: process.env.PLANNER_MODEL ?? "gpt-5.6",
+  plannerModel: process.env.PLANNER_MODEL ?? "gpt-5.6-luna",
+  plannerReasoningEffort: configuredPlannerReasoningEffort,
   realtimeVoice: configuredVoice,
   noiseReduction: configuredNoiseReduction,
   vadEagerness: configuredVadEagerness,
@@ -97,6 +114,11 @@ export function resolveRealtimeConfig(preset: unknown): RealtimeRuntimeConfig {
     return presetConfig(preset as RealtimePreset);
   }
   return config;
+}
+
+export function resolveRealtimeConfigForInstitution(institution: Institution): RealtimeRuntimeConfig {
+  const profile = getAssistantVoiceProfile(institution);
+  return presetConfig(profile.preset);
 }
 
 export function supportsReasoning(model: string): boolean {

@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev": "concurrently -n server,client,analytics -c blue,green,magenta \"npm:dev:server\" \"npm:dev:client\" \"npm:dev:analytics\"",
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite --config vite.config.ts",
-    "build": "tsc --noEmit && vite build --config vite.config.ts",
+    "dev:analytics": "npm --prefix Analytics/vitru-analytics-dashboard run dev -- --host 127.0.0.1 --port 5174",
+    "build": "npm run build:analytics && tsc --noEmit && vite build --config vite.config.ts",
+    "build:analytics": "npm --prefix Analytics/vitru-analytics-dashboard run build",
     "check": "tsc --noEmit",
-    "test": "node --import tsx --test tests/schedule-validation.test.ts tests/voice-diagnostics.test.ts tests/routine-extraction.test.ts",
+    "test": "node --import tsx --test tests/schedule-validation.test.ts tests/academic-calendar.test.ts tests/voice-diagnostics.test.ts tests/routine-extraction.test.ts tests/routine-normalization.test.ts tests/voice-profile.test.ts",
     "start": "tsx server/index.ts"
   },
   "dependencies": {

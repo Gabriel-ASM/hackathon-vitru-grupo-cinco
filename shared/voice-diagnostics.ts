@@ -15,6 +15,10 @@ export const diagnosticEventTypes = [
   "interrupted",
   "extraction_started",
   "extraction_completed",
+  "clarification_reused_draft",
+  "planner_started",
+  "planner_completed",
+  "planner_failed",
   "error",
 ] as const;
 

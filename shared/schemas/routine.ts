@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { DAY_KEYS } from "../types";
 
+export const temporaryClassChangeSchema = z.object({
+  course_code: z.string().min(1),
+  offering_id: z.string().min(1),
+  day: z.enum(DAY_KEYS),
+  start: z.string().regex(/^\d{2}:\d{2}$/),
+  end: z.string().regex(/^\d{2}:\d{2}$/),
+  temporary: z.literal(true),
+});
+
 const nullableString = z.string().nullable();
 const daySchema = z.enum(DAY_KEYS);
 
@@ -10,6 +19,20 @@ export const routineEntrySchema = z.object({
   start: nullableString,
   end: nullableString,
   notes: nullableString,
+  // Metadados opcionais permitem representar compromissos flexíveis sem
+  // transformar uma estimativa em um horário inventado.
+  duration_minutes: z.number().int().positive().nullable().optional(),
+  frequency_per_week: z.number().int().positive().nullable().optional(),
+  fixed: z.boolean().nullable().optional(),
+});
+
+// Structured Outputs exige que todas as propriedades existam. A versão
+// abaixo é usada apenas no contrato da resposta do extrator; a versão
+// pública acima continua tolerante para requests legados e para a UI.
+const structuredRoutineEntrySchema = routineEntrySchema.extend({
+  duration_minutes: z.number().int().positive().nullable(),
+  frequency_per_week: z.number().int().positive().nullable(),
+  fixed: z.boolean().nullable(),
 });
 
 export const studyPreferencesSchema = z.object({
@@ -45,13 +68,31 @@ export type RoutineEntry = z.infer<typeof routineEntrySchema>;
 export type StudentRoutine = z.infer<typeof studentRoutineSchema>;
 export type StudentRoutinePatch = z.infer<typeof routinePatchSchema>;
 
+const academicDecisionsSchema = z.object({
+  temporary_class_changes: z.array(temporaryClassChangeSchema),
+});
+
 export const routineExtractionResultSchema = z.object({
   routine: studentRoutineSchema,
   summary: z.string().trim().min(1).max(800),
   warnings: z.array(z.string().trim().min(1).max(300)).max(12),
+  academic_decisions: academicDecisionsSchema.default({ temporary_class_changes: [] }),
+});
+
+export const routineExtractionStructuredResultSchema = routineExtractionResultSchema.extend({
+  academic_decisions: academicDecisionsSchema,
+  routine: studentRoutineSchema.extend({
+    work: z.array(structuredRoutineEntrySchema),
+    commutes: z.array(structuredRoutineEntrySchema),
+    fixed_commitments: z.array(structuredRoutineEntrySchema),
+    hobbies: z.array(structuredRoutineEntrySchema),
+    exercise: z.array(structuredRoutineEntrySchema),
+    availability: z.array(structuredRoutineEntrySchema),
+  }),
 });
 
 export type RoutineExtractionResult = z.infer<typeof routineExtractionResultSchema>;
+export type AcademicDecisions = z.infer<typeof routineExtractionResultSchema>["academic_decisions"];
 
 export function createEmptyRoutine(): StudentRoutine {
   return {

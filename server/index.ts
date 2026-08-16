@@ -9,6 +9,7 @@ import {
   config,
   requireApiKey,
   resolveRealtimeConfig,
+  resolveRealtimeConfigForInstitution,
   supportsReasoning,
   type RealtimeRuntimeConfig,
 } from "./config";
@@ -19,19 +20,29 @@ import {
   buildRoutineExtractionInput,
   routineExtractorPrompt,
 } from "./prompts/routine-extractor";
+import { normalizeRoutineExtractionResult, normalizeStudentRoutine } from "./routine-normalization";
 import {
   appendVoiceDiagnosticEvents,
   createVoiceDiagnosticSession,
   readVoiceDiagnosticSession,
 } from "./voice-diagnostics";
 import {
+  applyTemporaryClassChanges,
   scheduleGenerationRequestSchema,
   studentScheduleSchema,
   validateWeeklySchedule,
   weeklyScheduleSchema,
 } from "../shared/schemas/schedule";
-import { routineExtractionResultSchema } from "../shared/schemas/routine";
+import {
+  routineExtractionStructuredResultSchema,
+} from "../shared/schemas/routine";
 import { transcriptEntrySchema } from "../shared/voice-transcript";
+import {
+  getAssistantVoiceProfile,
+  institutionKeys,
+  type AssistantVoiceProfile,
+  type Institution,
+} from "../shared/voice-profile";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -51,13 +62,20 @@ function safetyIdentifier(request: Request): string {
 
 function realtimeSessionConfig(
   schedule: ReturnType<typeof studentScheduleSchema.parse>,
+  profile: AssistantVoiceProfile,
   runtimeConfig: RealtimeRuntimeConfig = config,
   clarificationContext?: string,
+  presentationAlreadyShown = false,
 ) {
   const session = {
     type: "realtime",
     model: runtimeConfig.realtimeModel,
-    instructions: buildVoiceAgentInstructions(schedule, clarificationContext),
+    instructions: buildVoiceAgentInstructions(
+      schedule,
+      profile,
+      clarificationContext,
+      presentationAlreadyShown,
+    ),
     audio: {
       input: {
         format: {
@@ -110,6 +128,17 @@ app.post("/api/realtime/session", async (request, response) => {
     return;
   }
 
+  const institutionResult = z.enum(institutionKeys).safeParse(request.body?.institution ?? "uniasselvi");
+  if (!institutionResult.success) {
+    response.status(400).json({
+      error: "A instituiÃ§Ã£o escolhida para a conversa Ã© invÃ¡lida.",
+      details: institutionResult.error.flatten(),
+    });
+    return;
+  }
+  const institution = institutionResult.data as Institution;
+  const profile = getAssistantVoiceProfile(institution);
+
   let clarificationContext: string | undefined;
   if (request.body?.clarification_context !== undefined) {
     const parsedContext = z.string().trim().max(8_000).safeParse(request.body?.clarification_context);
@@ -124,9 +153,11 @@ app.post("/api/realtime/session", async (request, response) => {
   }
 
   try {
-    const runtimeConfig = resolveRealtimeConfig(request.body?.preset);
+    const runtimeConfig = config.diagnosticsEnabled && request.body?.preset
+      ? resolveRealtimeConfig(request.body.preset)
+      : resolveRealtimeConfigForInstitution(institution);
     const diagnosticSession = config.diagnosticsEnabled
-      ? await createVoiceDiagnosticSession(config.diagnosticsDir, runtimeConfig)
+      ? await createVoiceDiagnosticSession(config.diagnosticsDir, runtimeConfig, profile)
       : null;
     const apiKey = requireApiKey();
     const openAiResponse = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
@@ -137,7 +168,13 @@ app.post("/api/realtime/session", async (request, response) => {
         "OpenAI-Safety-Identifier": safetyIdentifier(request),
       },
       body: JSON.stringify(
-        realtimeSessionConfig(parsedSchedule.data, runtimeConfig, clarificationContext),
+        realtimeSessionConfig(
+          parsedSchedule.data,
+          profile,
+          runtimeConfig,
+          clarificationContext,
+          request.body?.presentation_already_shown === true,
+        ),
       ),
     });
 
@@ -170,6 +207,7 @@ app.post("/api/realtime/session", async (request, response) => {
       expires_at: data.expires_at ?? data.client_secret?.expires_at,
       diagnostic_session_id: diagnosticSession?.session_id,
       diagnostic_config: diagnosticSession?.config,
+      voice_profile: profile,
     });
   } catch (error) {
     response.status(500).json({
@@ -231,6 +269,7 @@ app.post("/api/routine/extract", async (request, response) => {
     const client = getOpenAIClient();
     const completion = await client.responses.parse({
       model: config.plannerModel,
+      reasoning: { effort: config.plannerReasoningEffort },
       input: [
         { role: "system", content: routineExtractorPrompt },
         {
@@ -242,7 +281,7 @@ app.post("/api/routine/extract", async (request, response) => {
         },
       ],
       text: {
-        format: zodTextFormat(routineExtractionResultSchema, "routine_extraction"),
+        format: zodTextFormat(routineExtractionStructuredResultSchema, "routine_extraction"),
       },
     });
 
@@ -250,7 +289,7 @@ app.post("/api/routine/extract", async (request, response) => {
       throw new Error("O organizador de rotina não retornou um objeto estruturado.");
     }
 
-    response.json(completion.output_parsed);
+    response.json(normalizeRoutineExtractionResult(completion.output_parsed));
   } catch (error) {
     response.status(500).json({
       error: "Não consegui organizar os dados da conversa.",
@@ -271,13 +310,19 @@ app.post("/api/schedule", async (request, response) => {
 
   try {
     const client = getOpenAIClient();
+    const planningRequest = scheduleGenerationRequestSchema.parse({
+      ...parsedRequest.data,
+      academic_schedule: applyTemporaryClassChanges(parsedRequest.data.academic_schedule),
+      routine: normalizeStudentRoutine(parsedRequest.data.routine),
+    });
     const completion = await client.responses.parse({
       model: config.plannerModel,
+      reasoning: { effort: config.plannerReasoningEffort },
       input: [
         { role: "system", content: scheduleGeneratorPrompt },
         {
           role: "user",
-          content: buildScheduleInput(parsedRequest.data),
+          content: buildScheduleInput(planningRequest),
         },
       ],
       text: {
@@ -289,11 +334,45 @@ app.post("/api/schedule", async (request, response) => {
       throw new Error("O Schedule Generator não retornou um objeto estruturado.");
     }
 
-    const schedule = validateWeeklySchedule(
-      completion.output_parsed,
-      parsedRequest.data.academic_schedule,
-    );
-    response.json({ schedule });
+    let candidate = completion.output_parsed;
+    let repairAttempted = false;
+    let schedule;
+    try {
+      schedule = validateWeeklySchedule(candidate, planningRequest.academic_schedule);
+    } catch (validationError) {
+      repairAttempted = true;
+      const repairCompletion = await client.responses.parse({
+        model: config.plannerModel,
+        reasoning: { effort: config.plannerReasoningEffort },
+        input: [
+          {
+            role: "system",
+            content: `${scheduleGeneratorPrompt}\n\nMODO DE REPARO: corrija o candidato abaixo sem perder nenhum compromisso confirmado. Todos os start/end devem ser HH:MM válidos; nunca use marcadores de ausência. Retorne somente o JSON final.`,
+          },
+          {
+            role: "user",
+            content: `${buildScheduleInput(planningRequest)}\n\nCANDIDATO A CORRIGIR:\n${JSON.stringify(candidate)}\n\nERROS DE VALIDAÇÃO:\n${errorMessage(validationError).slice(0, 4_000)}`,
+          },
+        ],
+        text: {
+          format: zodTextFormat(weeklyScheduleSchema, "weekly_schedule_repair"),
+        },
+      });
+
+      if (!repairCompletion.output_parsed) {
+        throw new Error("A tentativa de reparo não retornou um objeto estruturado.");
+      }
+      candidate = repairCompletion.output_parsed;
+      schedule = validateWeeklySchedule(candidate, planningRequest.academic_schedule);
+    }
+    response.json({
+      schedule,
+      planner: {
+        model: config.plannerModel,
+        reasoning_effort: config.plannerReasoningEffort,
+        repair_attempted: repairAttempted,
+      },
+    });
   } catch (error) {
     response.status(500).json({
       error: "Não consegui montar sua semana.",
@@ -305,6 +384,30 @@ app.post("/api/schedule", async (request, response) => {
 app.use("/api", (_request, response) => {
   response.status(404).json({ error: "Endpoint não encontrado." });
 });
+
+const calendarRoot = path.resolve(
+  process.cwd(),
+  "Calendário",
+  "sistema-de-recompensa-",
+  "calendario",
+);
+app.use("/calendario", express.static(calendarRoot, { index: "index.html" }));
+
+const analyticsDist = path.resolve(
+  process.cwd(),
+  "Analytics",
+  "vitru-analytics-dashboard",
+  "dist",
+);
+if (fs.existsSync(analyticsDist)) {
+  app.use("/analytics", express.static(analyticsDist));
+  app.get("/analytics", (_request, response) => {
+    response.sendFile(path.join(analyticsDist, "index.html"));
+  });
+  app.get("/analytics/*", (_request, response) => {
+    response.sendFile(path.join(analyticsDist, "index.html"));
+  });
+}
 
 const clientDist = path.resolve(process.cwd(), "client", "dist");
 if (fs.existsSync(clientDist)) {

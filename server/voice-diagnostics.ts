@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { RealtimeRuntimeConfig } from "./config";
 import { diagnosticEventTypes, type VoiceDiagnosticEvent } from "../shared/voice-diagnostics";
+import type { AssistantVoiceProfile } from "../shared/voice-profile";
 
 const maxStoredSessions = 20;
 const maxTextLength = 2_000;
@@ -10,7 +11,10 @@ const maxTextLength = 2_000;
 export type VoiceDiagnosticSession = {
   session_id: string;
   created_at: string;
-  config: Pick<RealtimeRuntimeConfig, "realtimeModel" | "realtimeVoice" | "noiseReduction" | "vadEagerness" | "reasoningEffort" | "maxOutputTokens" | "preset">;
+  config: Pick<RealtimeRuntimeConfig, "realtimeModel" | "realtimeVoice" | "noiseReduction" | "vadEagerness" | "reasoningEffort" | "maxOutputTokens" | "preset"> & {
+    institution?: AssistantVoiceProfile["institution"];
+    assistant_name?: AssistantVoiceProfile["assistantName"];
+  };
 };
 
 function sessionPath(directory: string, sessionId: string): string {
@@ -62,6 +66,7 @@ function sanitizeEvent(value: unknown): VoiceDiagnosticEvent | null {
 export async function createVoiceDiagnosticSession(
   directory: string,
   runtimeConfig: RealtimeRuntimeConfig,
+  profile?: AssistantVoiceProfile,
 ): Promise<VoiceDiagnosticSession> {
   await ensureDirectory(directory);
   const session: VoiceDiagnosticSession = {
@@ -75,6 +80,9 @@ export async function createVoiceDiagnosticSession(
       reasoningEffort: runtimeConfig.reasoningEffort,
       maxOutputTokens: runtimeConfig.maxOutputTokens,
       preset: runtimeConfig.preset,
+      ...(profile
+        ? { institution: profile.institution, assistant_name: profile.assistantName }
+        : {}),
     },
   };
   await fs.writeFile(sessionPath(directory, session.session_id), `${JSON.stringify(session)}\n`, "utf8");

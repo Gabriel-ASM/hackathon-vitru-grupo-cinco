@@ -7,7 +7,9 @@ import {
   type StudentSchedule,
   type WeeklySchedule,
 } from "../types";
-import { studentRoutineSchema } from "./routine";
+import { studentRoutineSchema, temporaryClassChangeSchema } from "./routine";
+
+export { temporaryClassChangeSchema } from "./routine";
 
 export const dayOfWeekSchema = z.enum(DAY_KEYS);
 export const eventTypeSchema = z.enum(EVENT_TYPES);
@@ -17,6 +19,22 @@ export const eventSourceSchema = z.enum([
   "ai_planning",
 ]);
 
+export const timeStringSchema = z.string().regex(/^\d{2}:\d{2}$/);
+
+export const academicOfferingSchema = z.object({
+  id: z.string().min(1),
+  course_code: z.string().min(1),
+  name: z.string().min(1),
+  day: dayOfWeekSchema,
+  start: timeStringSchema,
+  end: timeStringSchema,
+  type: z.string().min(1),
+  modality: z.string().min(1),
+  explicit_schedule: z.boolean(),
+  is_current: z.boolean(),
+  temporary: z.boolean(),
+});
+
 export const scheduleItemSchema = z.object({
   id: z.string(),
   type: eventTypeSchema,
@@ -25,6 +43,11 @@ export const scheduleItemSchema = z.object({
   end: z.string(),
   fixed: z.boolean(),
   source: eventSourceSchema,
+});
+
+const strictScheduleItemSchema = scheduleItemSchema.extend({
+  start: timeStringSchema,
+  end: timeStringSchema,
 });
 
 export const scheduleDaySchema = z.object({
@@ -40,6 +63,7 @@ export const weeklyScheduleSchema = z.object({
   summary: z.object({
     class_hours: z.number(),
     asynchronous_class_hours: z.number(),
+    academic_activity_hours: z.number(),
     recommended_extra_study_hours: z.number(),
     planned_extra_study_hours: z.number(),
     planned_free_hours: z.number(),
@@ -47,11 +71,21 @@ export const weeklyScheduleSchema = z.object({
   warnings: z.array(z.string()),
 });
 
+const strictScheduleDaySchema = scheduleDaySchema.extend({
+  items: z.array(strictScheduleItemSchema),
+});
+
+export const strictWeeklyScheduleSchema = weeklyScheduleSchema.extend({
+  days: z.array(strictScheduleDaySchema),
+});
+
 export const studentScheduleSchema = z.object({
   student: z.object({ name: z.string().min(1) }),
   classes: z.array(
     z.object({
       id: z.string().optional(),
+      course_code: z.string().min(1).optional(),
+      offering_id: z.string().min(1).optional(),
       name: z.string().min(1),
       day: dayOfWeekSchema,
       start: z.string().regex(/^\d{2}:\d{2}$/),
@@ -60,6 +94,9 @@ export const studentScheduleSchema = z.object({
     }),
   ),
   asynchronous_hours_week: z.number().nonnegative(),
+  academic_activity_hours_week: z.number().nonnegative().optional(),
+  available_offerings: z.array(academicOfferingSchema).optional().default([]),
+  temporary_class_changes: z.array(temporaryClassChangeSchema).optional().default([]),
 });
 
 export const scheduleGenerationRequestSchema = z.object({
@@ -75,6 +112,29 @@ export const scheduleGenerationRequestSchema = z.object({
 export type ScheduleGenerationRequest = z.infer<typeof scheduleGenerationRequestSchema>;
 export type WeeklyScheduleOutput = z.infer<typeof weeklyScheduleSchema>;
 
+export function applyTemporaryClassChanges(schedule: StudentSchedule): StudentSchedule {
+  const changes = schedule.temporary_class_changes ?? [];
+  if (changes.length === 0) return schedule;
+
+  return {
+    ...schedule,
+    classes: schedule.classes.map((academicClass) => {
+      const courseCode = academicClass.course_code ?? academicClass.id;
+      const change = changes.find((candidate) => candidate.course_code === courseCode);
+      if (!change) return academicClass;
+
+      return {
+        ...academicClass,
+        id: change.offering_id,
+        offering_id: change.offering_id,
+        day: change.day,
+        start: change.start,
+        end: change.end,
+      };
+    }),
+  };
+}
+
 type TimelineItem = {
   start: number;
   end: number;
@@ -86,7 +146,7 @@ export function validateWeeklySchedule(
   value: unknown,
   academicSchedule?: StudentSchedule,
 ): WeeklySchedule {
-  const schedule = weeklyScheduleSchema.parse(value);
+  const schedule = strictWeeklyScheduleSchema.parse(value);
   const errors: string[] = [];
   const timelineItems: TimelineItem[] = [];
 
@@ -113,12 +173,12 @@ export function validateWeeklySchedule(
     for (const item of day.items) {
       const start = minutesFromTime(item.start);
       const end = minutesFromTime(item.end);
-      const overnightSleep = item.type === "sleep" && end < start;
+      const overnightItem = ["sleep", "hobby", "personal"].includes(item.type) && end < start;
 
       if (
         Number.isNaN(start) ||
         Number.isNaN(end) ||
-        (end <= start && !overnightSleep)
+        (end <= start && !overnightItem)
       ) {
         errors.push(`Horário inválido no item "${item.title}".`);
         continue;
@@ -127,7 +187,7 @@ export function validateWeeklySchedule(
       const dayStart = index * 24 * 60;
       timelineItems.push({
         start: dayStart + start,
-        end: overnightSleep ? dayStart + 24 * 60 + end : dayStart + end,
+        end: overnightItem ? dayStart + 24 * 60 + end : dayStart + end,
         dayOfWeek: day.day_of_week,
         item,
       });
@@ -164,6 +224,59 @@ export function validateWeeklySchedule(
         errors.push(`A aula fixa "${academicClass.name}" não foi preservada exatamente.`);
       }
     }
+  }
+
+  const plannedAcademicActivityHours = schedule.days
+    .flatMap((day) => day.items)
+    .filter((item) => item.type === "academic_activity")
+    .reduce((total, item) => total + hoursBetween(item.start, item.end), 0);
+  const explicitAcademicActivityHours = academicSchedule?.academic_activity_hours_week;
+  const expectedAcademicActivityHours =
+    explicitAcademicActivityHours !== undefined && explicitAcademicActivityHours > 0
+      ? explicitAcademicActivityHours
+      : academicSchedule?.asynchronous_hours_week ?? 0;
+  if (expectedAcademicActivityHours > 0 && Math.abs(plannedAcademicActivityHours - expectedAcademicActivityHours) > 0.01) {
+    errors.push(
+      `A carga de atividades acadêmicas deveria totalizar ${expectedAcademicActivityHours}h, mas totalizou ${plannedAcademicActivityHours}h.`,
+    );
+  }
+  if (Math.abs(schedule.summary.academic_activity_hours - plannedAcademicActivityHours) > 0.01) {
+    errors.push("O resumo não corresponde à carga de atividades acadêmicas da agenda.");
+  }
+  const selectedAcademicClass = academicSchedule?.classes[0];
+  if (selectedAcademicClass && plannedAcademicActivityHours > 0) {
+    const subjectTokens = [selectedAcademicClass.course_code, ...selectedAcademicClass.name.split(/\s+/)]
+      .filter((token): token is string => Boolean(token))
+      .map((token) => token.toLocaleLowerCase().replace(/[^a-záéíóúàâêôãõç0-9]/gi, ""))
+      .filter((token) => token.length >= 4);
+    if (subjectTokens.length > 0) {
+      const unrelatedActivity = schedule.days
+        .flatMap((day) => day.items)
+        .filter((item) => item.type === "academic_activity")
+        .find((item) => {
+          const title = item.title.toLocaleLowerCase();
+          return !subjectTokens.some((token) => title.includes(token));
+        });
+      if (unrelatedActivity) {
+        errors.push(
+          `A atividade acadêmica "${unrelatedActivity.title}" não identifica a disciplina selecionada "${selectedAcademicClass.name}".`,
+        );
+      }
+    }
+  }
+  const plannedClassHours = schedule.days
+    .flatMap((day) => day.items)
+    .filter((item) => item.type === "class")
+    .reduce((total, item) => total + hoursBetween(item.start, item.end), 0);
+  if (Math.abs(schedule.summary.class_hours - plannedClassHours) > 0.01) {
+    errors.push("O resumo não corresponde à carga de aulas fixas da agenda.");
+  }
+  const plannedAsyncHours = schedule.days
+    .flatMap((day) => day.items)
+    .filter((item) => item.type === "asynchronous_class")
+    .reduce((total, item) => total + hoursBetween(item.start, item.end), 0);
+  if (Math.abs(schedule.summary.asynchronous_class_hours - plannedAsyncHours) > 0.01) {
+    errors.push("O resumo não corresponde à carga de aulas assíncronas da agenda.");
   }
 
   const numericSummary = Object.entries(schedule.summary).filter(

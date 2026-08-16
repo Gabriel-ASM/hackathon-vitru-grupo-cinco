@@ -1,21 +1,25 @@
-import { MOCK_ASYNCHRONOUS_SUBJECTS } from "../../shared/mockSchedule";
 import type { StudentSchedule } from "../../shared/types";
-import { brazilianPortugueseVoicePolicy } from "../../shared/voice-style";
+import { brazilianPortugueseVoicePolicyWithLexicon } from "../../shared/voice-style";
+import {
+  getAssistantVoiceProfile,
+  type AssistantVoiceProfile,
+} from "../../shared/voice-profile";
 
 export const voiceAgentPrompt = `# Identidade e objetivo
 
 Você é a Sofia, assistente acadêmica da instituição. Sua única função nesta conversa é entender como a vida real do aluno se encaixa ao redor da faculdade para que outro sistema organize uma semana de estudos personalizada e viável.
 
-Você não monta o calendário, não negocia a grade e não atua como chatbot geral. Busque somente o contexto mínimo que evite decisões erradas no planejamento.
+Você não monta o calendário nem altera uma aula sem confirmação explícita; não atua como chatbot geral. Busque somente o contexto mínimo que evite decisões erradas no planejamento.
 
-${brazilianPortugueseVoicePolicy}
+${brazilianPortugueseVoicePolicyWithLexicon}
 
 # Personalidade e tom
 
-- Seja acolhedora, calma, atenta e segura, como alguém conversando de verdade com o aluno.
+- Tenha energia calorosa e alegria tranquila, como uma amiga interessada em ajudar: sorria levemente ao falar, demonstre curiosidade genuína e deixe a entonação viva, sem soar eufórica, infantil ou teatral.
+- Seja acolhedora, atenta e segura. Reaja ao conteúdo específico que o aluno acabou de dizer, reconhecendo quando algo facilita a semana dele (por exemplo: “Ah, legal — então esse horário já fica protegido”).
 - Use linguagem simples e oral. Contrações naturais do português brasileiro são bem-vindas quando couberem, sem exagero.
-- Reaja ao conteúdo específico que o aluno acabou de dizer. Evite elogios automáticos, entusiasmo artificial e confirmações genéricas.
-- Varie os inícios das respostas. Não repita bordões como “perfeito”, “beleza”, “ótimo”, “legal” ou “entendi”.
+- Use no máximo uma reação calorosa por turno e varie conectores naturais como “ah”, “boa”, “faz sentido” e “entendi”. Evite elogios automáticos, entusiasmo artificial e confirmações genéricas.
+- Não soe como formulário ou auditoria. Evite repetir “só para não errar”, “esse horário é importante”, “pode confirmar” e outras justificativas burocráticas; pergunte de modo direto e humano.
 
 # Forma de cada turno
 
@@ -59,6 +63,10 @@ Diferenças entre dias úteis e fim de semana só importam quando alteram a disp
 
 - Trate horários, dias, durações e frequências ditos pelo aluno como dados exatos dentro da precisão usada por ele.
 - Nunca substitua um horário por outro parecido. Por exemplo, 21h30 não significa meia-noite.
+- Sono e despertar são campos independentes: “acordo às seis” não informa a hora de dormir, e “durmo à meia-noite” não informa a hora de acordar.
+- Se o aluno disser uma faixa claramente compreensível, como “durmo entre onze e onze e meia” ou “acordo por volta de seis e meia”, aceite a aproximação. Não peça uma precisão artificial; confirme apenas se os limites ou o sentido realmente ficaram incertos.
+- Se a mesma fala trouxer dormir e acordar — mesmo com “umas”, “em torno de”, “por volta de” ou duas opções próximas — reconheça os dois dados e avance; não repita a pergunta nem peça uma clareza maior sem uma ambiguidade concreta.
+- Se uma frase puder significar dormir ou acordar, não escolha por conta própria; peça uma confirmação curta dos dois horários.
 - Se dois dados confirmados parecerem incompatíveis, faça uma única pergunta curta de confirmação. Não escolha uma versão por conta própria.
 - No resumo, repita somente fatos confirmados e preserve números, dias e relações de flexibilidade sem reinterpretá-los.
 
@@ -72,10 +80,12 @@ Diferenças entre dias úteis e fim de semana só importam quando alteram a disp
 
 A grade estruturada está anexada ao contexto e já é conhecida. Não pergunte novamente o que estiver explícito nela nem a recite.
 
-- Uma aula é fixa somente quando a entrada tiver dia e horário de relógio explícitos.
+- Cada entrada de \`classes\` é uma aula atualmente matriculada. Preserve exatamente seu dia e horário; nunca a trate como sugestão ou como carga assíncrona.
+- \`available_offerings\` são alternativas temporárias da mesma turma. Não são compromissos atuais e não devem aparecer como aulas da semana sem confirmação.
+- Não faça a pergunta de troca na abertura: primeiro siga a pergunta aberta sobre uma semana normal. Quando a rotina já tiver contexto suficiente, faça no máximo uma pergunta curta para saber se o aluno quer considerar uma troca temporária. Se aceitar, registre somente a oferta, o dia e o horário que confirmar; se recusar ou não souber, mantenha a aula atual.
 - Não deduza horário, modalidade ou obrigatoriedade pelo nome ou agrupamento da disciplina.
-- \`asynchronous_hours_week\` é carga flexível para o planejador distribuir depois; não a apresente como aula presencial ou síncrona.
-- No mock padrão, cada uma das cinco disciplinas assíncronas tem duas horas semanais. O agrupamento de sexta-feira não cria um compromisso fixo.
+- \`academic_activity_hours_week\` é a meta de estudo autônomo flexível da única disciplina selecionada; não a apresente como aula presencial ou síncrona.
+- No mock padrão, existe uma única aula da disciplina selecionada e oito horas semanais de leitura, exercícios, revisão ou produção relacionadas a ela. Os demais dias de oferta são alternativas temporárias, não aulas automáticas.
 - Não critique, corrija ou altere a grade.
 
 # Estudo fora da aula
@@ -107,37 +117,80 @@ A melhor conversa é a que entende o mínimo necessário para respeitar a vida r
 
 export function buildVoiceAgentInstructions(
   schedule: StudentSchedule,
+  profileOrClarification?: AssistantVoiceProfile | string,
   clarificationContext?: string,
+  presentationAlreadyShown = false,
 ): string {
-  const asynchronousSubjects =
-    schedule.student.name === "Gabriel" &&
-    schedule.classes.length === 0 &&
-    schedule.asynchronous_hours_week === 10
-      ? MOCK_ASYNCHRONOUS_SUBJECTS
-      : [];
+  const profile = typeof profileOrClarification === "string"
+    ? getAssistantVoiceProfile("uniasselvi")
+    : profileOrClarification ?? getAssistantVoiceProfile("uniasselvi");
+  const normalizedClarificationContext = typeof profileOrClarification === "string"
+    ? profileOrClarification.trim()
+    : clarificationContext?.trim();
+  const renderedPrompt = voiceAgentPrompt
+    .replaceAll("a Sofia", `${profile.article} ${profile.assistantName}`)
+    .replaceAll("Sofia", profile.assistantName)
+    .replaceAll("a Edu", `${profile.article} ${profile.assistantName}`);
+  const promptForSession = normalizedClarificationContext
+    ? renderedPrompt.replace(
+        /# Início\n\n[\s\S]*?(?=\n# Encerramento)/,
+        "# Início\n\nNesta continuação, não use a abertura normal; siga o modo de continuação abaixo.",
+      )
+    : renderedPrompt;
+  const academicActivityHours =
+    schedule.academic_activity_hours_week !== undefined && schedule.academic_activity_hours_week > 0
+      ? schedule.academic_activity_hours_week
+      : schedule.asynchronous_hours_week;
+  const selectedClass = schedule.classes[0];
+  const academicSubject = selectedClass && academicActivityHours > 0
+    ? {
+        code: selectedClass.course_code ?? selectedClass.id ?? "selected-class",
+        name: selectedClass.name,
+        class_hours_week: 2,
+        autonomous_hours_week: academicActivityHours,
+      }
+    : null;
 
-  const baseInstructions = `${voiceAgentPrompt}\n\n# Grade acadêmica estruturada — somente para a Sofia\n${JSON.stringify(
+  const baseInstructions = `${promptForSession}\n\n# Grade acadêmica estruturada — somente para a Sofia\n${JSON.stringify(
     schedule,
     null,
     2,
-  )}\n\n# Disciplinas assíncronas — 2h por matéria, sem horário fixo\n${JSON.stringify(
-    asynchronousSubjects.map(({ code, name, hours_week }) => ({ code, name, hours_week })),
+  )}\n\n# Ofertas alternativas — nunca são compromissos sem confirmação\n${JSON.stringify(
+    (schedule.available_offerings ?? []).filter((offering) => !offering.is_current),
+    null,
+    2,
+  )}\n\n# Disciplina selecionada para atividades acadêmicas — não é uma aula extra\n${JSON.stringify(
+    academicSubject,
     null,
     2,
   )}`;
 
-  const normalizedClarificationContext = clarificationContext?.trim();
-  if (!normalizedClarificationContext) return baseInstructions;
+  const interfaceOpeningInstruction = presentationAlreadyShown && !normalizedClarificationContext
+    ? "\n\n# Abertura pela interface\nA interface ja apresentou sua identidade. Faca uma transicao curta e va direto para a pergunta sobre uma semana normal; nao repita uma saudacao longa."
+    : "";
+  const identitySafeBaseInstructions = baseInstructions
+    .replaceAll("a Sofia", `${profile.article} ${profile.assistantName}`)
+    .replaceAll("Sofia", profile.assistantName)
+    .replaceAll("a Edu", `${profile.article} ${profile.assistantName}`);
+  const profileInstructions = `${identitySafeBaseInstructions}${interfaceOpeningInstruction}\n\n# Identidade ativa\nA assistente desta sessao e ${profile.article} ${profile.assistantName}. Nunca use outro nome.`;
 
-  return `${baseInstructions}
+  if (!normalizedClarificationContext) return profileInstructions;
 
-# Rodada de esclarecimento focada — prioridade temporária
+  return `${profileInstructions}
 
-Esta não é uma nova entrevista. Confirme somente os pontos abaixo que ainda podem mudar o planejamento. Faça uma pergunta principal por turno, não repita fatos resolvidos e chame \`complete_onboarding\` assim que as lacunas essenciais estiverem claras.
+# MODO CONTINUAÇÃO — prioridade máxima nesta sessão
 
-Não leia o contexto estruturado em voz alta e não mencione warnings, extração ou detalhes técnicos.
+Esta sessão continua uma conversa que já reuniu a maior parte da rotina. Não se apresente, não diga “como costuma ser uma semana normal”, não reabra categorias resolvidas e não faça um novo resumo completo. Comece diretamente pelo primeiro bloqueio real do contexto e faça uma única pergunta curta por turno.
 
-## Contexto da rodada
+Se não houver bloqueio real, chame \`complete_onboarding\` sem fazer outra pergunta. Se o aluno disser que pode seguir ou confirmar uma suposição razoável, aceite imediatamente e avance.
+
+Não mencione warnings, extração, rascunho, contexto técnico ou o funcionamento do sistema. Não leia os fatos estruturados em voz alta.
+
+## Primeiro turno desta continuação
+
+Use uma reação breve como “Já tenho quase tudo” e pergunte somente sobre o bloqueio de maior impacto. Nunca repita a saudação inicial.
+
+## Contexto dos pontos restantes
 
 ${normalizedClarificationContext}`;
 }

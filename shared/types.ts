@@ -13,6 +13,7 @@ export type DayOfWeek = (typeof DAY_KEYS)[number];
 export const EVENT_TYPES = [
   "class",
   "asynchronous_class",
+  "academic_activity",
   "study",
   "work",
   "commute",
@@ -26,6 +27,8 @@ export type EventType = (typeof EVENT_TYPES)[number];
 
 export type AcademicClass = {
   id?: string;
+  course_code?: string;
+  offering_id?: string;
   name: string;
   day: DayOfWeek;
   start: string;
@@ -33,12 +36,40 @@ export type AcademicClass = {
   type: string;
 };
 
+export type AcademicOffering = {
+  id: string;
+  course_code: string;
+  name: string;
+  day: DayOfWeek;
+  start: string;
+  end: string;
+  type: string;
+  modality: string;
+  explicit_schedule: boolean;
+  is_current: boolean;
+  temporary: boolean;
+};
+
+export type TemporaryClassChange = {
+  course_code: string;
+  offering_id: string;
+  day: DayOfWeek;
+  start: string;
+  end: string;
+  temporary: true;
+};
+
 export type StudentSchedule = {
   student: {
     name: string;
   };
   classes: AcademicClass[];
+  /** Mantido por compatibilidade com o contrato anterior. */
   asynchronous_hours_week: number;
+  /** Horas de atividades autônomas da disciplina selecionada, sem horário de aula fixo. */
+  academic_activity_hours_week?: number;
+  available_offerings?: AcademicOffering[];
+  temporary_class_changes?: TemporaryClassChange[];
 };
 
 export type ScheduleItem = {
@@ -62,6 +93,7 @@ export type WeeklySchedule = {
   summary: {
     class_hours: number;
     asynchronous_class_hours: number;
+    academic_activity_hours: number;
     recommended_extra_study_hours: number;
     planned_extra_study_hours: number;
     planned_free_hours: number;
