@@ -27,6 +27,29 @@
     { begin_date: "2026-08-17", end_date: "2026-08-17", description: "Segundo Encontro Presencial", subject_name: "Qualidade e Testes de Software", begin_hour: "19:00", end_hour: "22:00" }
   ];
 
+  // Mensagens ilustrativas do protótipo, sorteadas ao resgatar uma recompensa.
+  const redeemRankingMessages = [
+    () => `Você está no top ${randomInteger(5, 15)}% da base.`,
+    () => {
+      const tasks = randomInteger(1, 3);
+      return `Faltam apenas ${tasks} ${tasks === 1 ? 'tarefa' : 'tarefas'} para alcançar o top 100 da sua região.`;
+    },
+    () => `Você ocupa a posição #${randomInteger(71, 100)} no ranking semanal da base.`,
+    () => `Seu aproveitamento subiu ${randomInteger(8, 24)}% nesta semana.`,
+    () => {
+      const tasks = randomInteger(1, 3);
+      const rank = randomInteger(50, 100);
+      return `Mais ${tasks} ${tasks === 1 ? 'tarefa' : 'tarefas'} para entrar no top ${rank} da base.`;
+    },
+    () => `Você já concluiu ${randomInteger(3, 9)} tarefas e está entre os ${randomInteger(10, 20)}% melhores da turma.`,
+    () => `Faltam ${randomInteger(10, 50)} pontos para alcançar a próxima faixa: top ${randomInteger(10, 25)}%.`,
+    () => `Você avançou ${randomInteger(4, 18)} posições e está no top ${randomInteger(10, 30)}% da região.`
+  ];
+
+  function randomInteger(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
   // ==========================================================================
   // UTILITÁRIOS
   // ==========================================================================
@@ -1150,7 +1173,15 @@
         font-weight: 700;
         color: #22c55e;
         z-index: 10001;
-        animation: sofia-success-appear 2.5s ease-out forwards;
+        animation: sofia-success-appear 5s ease-out forwards;
+      }
+      .sofia-redeem-ranking {
+        margin-top: 8px;
+        max-width: 360px;
+        font-size: 14px;
+        line-height: 1.4;
+        font-weight: 600;
+        color: var(--theme-text, #fff);
       }
       @keyframes sofia-success-appear {
         0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
@@ -1685,6 +1716,11 @@
     requestAnimationFrame(step);
   }
 
+  function getRandomRedeemRankingMessage() {
+    const index = randomInteger(0, redeemRankingMessages.length - 1);
+    return redeemRankingMessages[index]();
+  }
+
   function confirmRedeem() {
     const hadPoints = totalPoints;
 
@@ -1717,9 +1753,14 @@
       // Success message (auto-removes via CSS animation)
       const msg = document.createElement('div');
       msg.className = 'sofia-redeem-success';
-      msg.textContent = 'Pontos retirados com sucesso';
+      const successTitle = document.createElement('div');
+      successTitle.textContent = 'Pontos retirados com sucesso';
+      const rankingMessage = document.createElement('div');
+      rankingMessage.className = 'sofia-redeem-ranking';
+      rankingMessage.textContent = getRandomRedeemRankingMessage();
+      msg.append(successTitle, rankingMessage);
       document.body.appendChild(msg);
-      setTimeout(() => { msg.remove(); }, 2600);
+      setTimeout(() => { msg.remove(); }, 5200);
 
       // Update button state after animation
       setTimeout(() => {

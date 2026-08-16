@@ -15,3 +15,6 @@ logs/
 *.log
 npm-debug.log*
 .DS_Store
+
+# Dados brutos de análise — não necessários para executar o produto
+*.xlsx

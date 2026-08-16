@@ -1,9 +1,10 @@
 /* ============================================================
    Sofia Flow — Chat da Sofia
-   HTML5 + CSS3 + JavaScript Vanilla (sem dependências, sem backend)
+   HTML5 + CSS3 + JavaScript Vanilla
 
-   A camada de IA será conectada depois: todo o texto da Sofia passa
-   por receiveMessage(), que é o único ponto a ser substituído.
+   A interface usa o backend do repositório para voz, extração de rotina e
+   planejamento. As respostas demonstrativas continuam disponíveis como
+   fallback para navegação sem uma chamada de IA.
    ============================================================ */
 
 import { RealtimeVoiceSession } from "../../../../client/src/voice/realtimeVoiceSession";
@@ -69,8 +70,7 @@ import { getAssistantVoiceProfile } from "../../../../shared/voice-profile";
     ]
   };
 
-  /* Respostas demonstrativas por palavra-chave.
-     TODO: conectar ao backend da Sofia (substituir por resposta do modelo). */
+  /* Respostas demonstrativas por palavra-chave para navegação sem API. */
   const DEMO_REPLIES = [
     {
       keys: ["oi", "ola", "olá", "bom dia", "boa tarde", "boa noite", "hey"],

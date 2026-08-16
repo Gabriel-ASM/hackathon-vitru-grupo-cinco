@@ -1,18 +1,13 @@
-# SOFIA-FLOW-CHAT
+# Interface Sofia/Edu
 
+Front-end principal do produto. A interface é HTML, CSS e JavaScript modular, servido pelo Vite na raiz do repositório.
 
-Front-end do chat acadêmico **SOFIA&EDU-CHAT**, desenvolvido no Hackathon Vitru Educação.
+## Responsabilidades
 
-Interface conversacional da assistente (Sofia / Edu), com troca de identidade visual por marca, quick replies, plano de estudos interativo e composer moderno — tudo no navegador, sem backend.:
+- Chat visual e troca de identidade entre Sofia e Edu.
+- Sessão de voz Realtime pelo adaptador em `client/src/voice`.
+- Extração da rotina e geração da semana via `/api`.
+- Botões de acesso ao calendário acadêmico e ao dashboard Analytics.
+- Persistência do JSON acadêmico no navegador para a rota `/calendario/`.
 
-## O que o front faz
-
-- Chat com mensagens, digitação e scroll automático
-- Temas: **UNIASSELVI** (Sofia) e **UniCesumar** (Edu)
-- Avatar e nome da assistente mudam com o tema
-- Quick replies: plano de estudos, dúvidas e ajustar rotina
-- Card de plano com checklist, progresso e +50 pontos
-- Composer com “Falar” (áudio), enviar e barra de ferramentas
-- Botão “Ouvir” com animação visual (preparado para TTS depois)
-
-
+O fluxo completo de instalação e demonstração está no [README da raiz](../../README.md).
