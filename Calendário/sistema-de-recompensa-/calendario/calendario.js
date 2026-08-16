@@ -20,27 +20,6 @@
   // DADOS MOCKADOS (Requisito 3 — estrutura isolada e substituível)
   // ==========================================================================
 
-  /**
-   * Study goals — fonte de dados isolada.
-   * No futuro, pode ser substituída por chamada a API sem alterar o componente.
-   */
-  const studyGoals = [
-    { date: "2026-08-10", subject: "Matemática — Unidade 1", duration: 20, action: "Leia as páginas 5 a 12 da Unidade 1 e destaque os três conceitos principais: limites, continuidade e derivadas.", points: 50 },
-    { date: "2026-08-11", subject: "Matemática — Unidade 1", duration: 20, action: "Resolva as questões 1 a 5 da lista da Unidade 1 sem consultar o material. Depois, confira as respostas no gabarito.", points: 50 },
-    { date: "2026-08-12", subject: "Administração — Unidade 1", duration: 20, action: "Leia as páginas 12 a 18 da Unidade 1 e anote três diferenças entre planejamento estratégico, tático e operacional.", points: 50 },
-    { date: "2026-08-13", subject: "Matemática — Unidade 1", duration: 20, action: "Refaça as questões 1, 3, 5, 7 e 10 da Unidade 1. Depois, revise a resolução das questões que errar.", points: 50 },
-    { date: "2026-08-14", subject: "Administração — Unidade 1", duration: 20, action: "Revise os conceitos de missão, visão e valores. Escreva uma frase explicando cada um deles com suas próprias palavras.", points: 50 },
-    { date: "2026-08-15", subject: "Revisão semanal", duration: 30, action: "Responda o quiz de 10 questões sobre os conteúdos estudados durante a semana. Revise somente as questões que errar.", points: 50 },
-    { date: "2026-08-16", subject: null, duration: 0, action: "Descanso", points: 0 },
-    { date: "2026-08-17", subject: "Matemática — Unidade 2", duration: 20, action: "Leia as páginas 20 a 28 da Unidade 2 e destaque as definições de integral definida e indefinida.", points: 50 },
-    { date: "2026-08-18", subject: "Matemática — Unidade 2", duration: 20, action: "Resolva as questões 6 a 10 da lista da Unidade 2 sem consultar o material. Depois, confira as respostas.", points: 50 },
-    { date: "2026-08-19", subject: "Administração — Unidade 2", duration: 20, action: "Leia as páginas 22 a 30 da Unidade 2 e anote três exemplos reais de cada tipo de estrutura organizacional.", points: 50 },
-    { date: "2026-08-20", subject: "Matemática — Unidade 2", duration: 20, action: "Refaça as questões 2, 4, 6, 8 e 9 da Unidade 2. Anote em uma frase o erro cometido em cada questão.", points: 50 },
-    { date: "2026-08-21", subject: "Administração — Unidade 2", duration: 20, action: "Resuma em até 5 linhas o capítulo sobre liderança situacional e identifique qual estilo se aplica ao seu contexto.", points: 50 },
-    { date: "2026-08-22", subject: "Revisão semanal", duration: 30, action: "Responda o quiz de 10 questões sobre os conteúdos da semana. Revise somente as questões que errar e releia o trecho correspondente.", points: 50 },
-    { date: "2026-08-23", subject: null, duration: 0, action: "Descanso", points: 0 }
-  ];
-
   /** Eventos acadêmicos mockados (simulando resposta da API de eventos) */
   const baseAcademicEvents = [
     { begin_date: "2026-07-20", end_date: "2026-08-15", description: "Período para responder avaliação III", subject_name: "Qualidade e Testes de Software", begin_hour: "19:00", end_hour: "20:30" },
@@ -57,10 +36,38 @@
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
-  /** Lookup de tarefa do dia (Requisito 3.3) — retorna registro ou null */
-  function getStudyGoalForDate(dateStr) {
-    const goal = studyGoals.find(g => g.date === dateStr);
-    return goal || null;
+  /**
+   * Retorna somente uma tarefa derivada do calendário acadêmico importado.
+   * O painel não pode usar uma agenda de demonstração paralela, pois ela pode
+   * mostrar uma disciplina diferente da que a Sofia acabou de planejar.
+   */
+  function getAcademicGoalForDate(dateStr) {
+    const importedEvents = getEventsForDate(dateStr)
+      .filter((event) => event.source === 'sofia');
+    if (importedEvents.length === 0) return null;
+
+    const event = importedEvents.find((candidate) => candidate.occurrenceId === selectedEventId) ||
+      importedEvents.find((candidate) => candidate.type === 'academic_activity') ||
+      importedEvents[0];
+    const duration = Math.max(0, timeToMinutes(event.end_hour) - timeToMinutes(event.begin_hour));
+    const isTask = event.type === 'academic_activity';
+
+    return {
+      event,
+      subject: event.subject_name || event.description,
+      duration,
+      action: isTask
+        ? 'Atividade acadêmica importada da agenda da Sofia.'
+        : `${eventTypeLabel(event)} importado para este horário.`,
+      points: isTask ? 50 : 0,
+      isTask,
+    };
+  }
+
+  function getAcademicTaskStorageKey(goal) {
+    return goal && goal.event && goal.event.occurrenceId
+      ? `academic:${goal.event.occurrenceId}`
+      : selectedDate;
   }
 
   function normalizeEventText(value) {
@@ -840,6 +847,13 @@
         color: #86efac;
         padding: 16px 0;
       }
+      .sofia-empty,
+      .sofia-event-note {
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--theme-text-muted, #aaa);
+        padding: 10px 0 16px;
+      }
 
       /* Checkbox de conclusão */
       .sofia-checkbox-wrapper {
@@ -1033,25 +1047,6 @@
         border: 1px solid var(--theme-border-light);
       }
       .sofia-modal-cancel:hover { background: var(--theme-border-light); }
-
-      /* Ir para tarefa link */
-      .sofia-go-task {
-        display: inline-block;
-        color: var(--theme-primary);
-        font-size: 13px;
-        font-weight: 600;
-        text-decoration: none;
-        margin-bottom: 16px;
-        transition: color 0.15s;
-      }
-      .sofia-go-task:hover {
-        color: var(--theme-primary-hover);
-        text-decoration: underline;
-      }
-      .sofia-go-task:focus-visible {
-        outline: 2px solid var(--theme-primary);
-        outline-offset: 2px;
-      }
 
       /* Storage warning */
       .sofia-storage-warning {
@@ -1253,7 +1248,7 @@
           <div id="events-section"></div>
 
           <!-- Painel Sofia -->
-          <div class="sofia-panel" id="sofia-panel" aria-label="Minha meta de hoje"></div>
+          <div class="sofia-panel" id="sofia-panel" aria-label="Minha meta do dia"></div>
 
           <!-- Card de pontuação -->
           <div class="sofia-points-card" id="sofia-points-card" aria-label="Pontuação acumulada">
@@ -1433,29 +1428,34 @@
     const panel = document.getElementById('sofia-panel');
     if (!panel) return;
 
-    const goal = getStudyGoalForDate(selectedDate);
+    const goal = getAcademicGoalForDate(selectedDate);
     const dateDisplay = formatDateDisplay(selectedDate);
 
-    // Verificar se é dia de descanso (Requisito 2.5, 2.6)
-    const isRestDay = !goal || goal.subject === null;
-
-    let html = `<div class="sofia-title">Minha meta de hoje</div>`;
+    let html = `<div class="sofia-title">Minha meta do dia</div>`;
     html += `<div class="sofia-date">${dateDisplay}</div>`;
 
-    if (isRestDay) {
-      html += `<div class="sofia-rest">Dia de descanso</div>`;
+    if (!goal) {
+      html += `<div class="sofia-empty">Nenhuma tarefa acadêmica foi importada para esta data.</div>`;
       panel.innerHTML = html;
       return;
     }
 
-    // Tarefa existe — exibir detalhes (Requisito 2.3)
-    html += `<div class="sofia-subject">${goal.subject}</div>`;
-    html += `<div class="sofia-duration">${goal.duration} minutos</div>`;
-    html += `<div class="sofia-action">${goal.action}</div>`;
-    html += `<a href="#" class="sofia-go-task" aria-label="Ir para a tarefa no AVA">Ir para tarefa</a>`;
+    // Exibe o item que veio da agenda importada, sem inventar outra disciplina.
+    const timeLabel = goal.duration > 0
+      ? `${goal.duration} minutos`
+      : 'Horário acadêmico';
+    html += `<div class="sofia-subject">${escapeHtml(goal.subject)}</div>`;
+    html += `<div class="sofia-duration">${timeLabel} · ${escapeHtml(goal.event.begin_hour)}–${escapeHtml(goal.event.end_hour)}</div>`;
+    html += `<div class="sofia-action">${escapeHtml(goal.action)}</div>`;
+
+    if (!goal.isTask) {
+      html += `<div class="sofia-event-note">Este item é um compromisso acadêmico, não uma tarefa pontuável.</div>`;
+      panel.innerHTML = html;
+      return;
+    }
 
     // Checkbox de conclusão (Requisito 4) — with redeemed state support
-    const taskState = completedTasks[selectedDate];
+    const taskState = completedTasks[getAcademicTaskStorageKey(goal)];
     const isRedeemed = taskState === 'redeemed';
     const isChecked = taskState === true || isRedeemed;
 
@@ -1538,24 +1538,27 @@
     if (checkboxDebounceTimer) return;
     checkboxDebounceTimer = setTimeout(() => { checkboxDebounceTimer = null; }, 300);
 
-    const goal = getStudyGoalForDate(selectedDate);
-    if (!goal || goal.subject === null) return;
+    const goal = getAcademicGoalForDate(selectedDate);
+    if (!goal || !goal.isTask || goal.points < 1) return;
 
-    const taskState = completedTasks[selectedDate];
+    const taskState = completedTasks[getAcademicTaskStorageKey(goal)];
+    const points = goal.points;
 
     // If task is redeemed, do nothing — it's locked
     if (taskState === 'redeemed') return;
 
     const isCurrentlyChecked = taskState === true;
 
+    const taskKey = getAcademicTaskStorageKey(goal);
+
     if (isCurrentlyChecked) {
       // Desmarcar — subtrair 50 pontos, floor at 0
-      totalPoints = Math.max(0, totalPoints - 50);
-      completedTasks[selectedDate] = false;
+      totalPoints = Math.max(0, totalPoints - points);
+      completedTasks[taskKey] = false;
     } else {
       // Marcar — adicionar 50 pontos
-      totalPoints += 50;
-      completedTasks[selectedDate] = true;
+      totalPoints += points;
+      completedTasks[taskKey] = true;
     }
 
     // Persistir de forma síncrona (Requisito 5.5, 7)
@@ -1765,13 +1768,6 @@
 
     // Checkbox de conclusão — delegação para lidar com re-renders
     document.getElementById('sofia-panel').addEventListener('click', function (e) {
-      const goTaskLink = e.target.closest('.sofia-go-task');
-      if (goTaskLink) {
-        e.preventDefault();
-        goTaskLink.textContent = 'Abrindo...';
-        setTimeout(() => { goTaskLink.textContent = 'Ir para tarefa'; }, 1000);
-        return;
-      }
       const checkbox = e.target.closest('#sofia-checkbox');
       if (checkbox) handleCheckboxToggle();
     });
