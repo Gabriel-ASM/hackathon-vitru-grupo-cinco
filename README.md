@@ -2,6 +2,13 @@
 
 Protótipo demonstrável para o Hackathon Vitru. A Sofia (Uniasselvi) ou o Edu (UniCesumar) conversa com o aluno por voz, entende a rotina real, monta uma semana possível e publica os compromissos acadêmicos no calendário integrado.
 
+## Equipe
+
+- Henrique Soares Serra
+- Gabriel Augusto
+- Eduardo Barbosa
+- Maria Eduarda Leonardo
+
 ## O que a banca deve ver
 
 1. O aluno escolhe a identidade da instituição e toca em **Falar**.
