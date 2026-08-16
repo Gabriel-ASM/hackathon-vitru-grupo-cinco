@@ -2,6 +2,16 @@
 
 Protótipo demonstrável para o Hackathon Vitru. A Sofia (Uniasselvi) ou o Edu (UniCesumar) conversa com o aluno por voz, entende a rotina real, monta uma semana possível e publica os compromissos acadêmicos no calendário integrado.
 
+## Demonstração visual
+
+### Fluxo principal
+
+![Demonstração do fluxo principal](./Apresentacao.gif)
+
+### Calendário e ranking
+
+![Calendário com sistema de recompensas](./Calendário-Ranking.gif)
+
 ## Equipe
 
 - Henrique Soares Serra
